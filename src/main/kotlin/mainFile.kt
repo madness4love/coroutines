@@ -25,6 +25,9 @@ private val client = OkHttpClient.Builder()
 
 
 fun main() {
+    val collection = mutableListOf<Any>()
+//форматированный вывод в консоль
+/*
     with(CoroutineScope(EmptyCoroutineContext)) {
         launch {
            getPosts(client)
@@ -46,6 +49,36 @@ fun main() {
                }
         }
     }
+
+ */
+
+    with(CoroutineScope(EmptyCoroutineContext)) {
+        launch {
+            getPosts(client)
+                .map { post ->
+                    async {
+                        val author = getAuthor(client, post.authorId)
+                        collection.add(author)
+                    }.await()
+                    collection.add(post)
+                    async { getComments(client, post.id)
+                        .map { comment  ->
+                            async {
+                                val author = getAuthor(client, comment.authorId)
+                                collection.add(author)
+                            }.await()
+                            collection.add(comment)
+                        }
+                    }.await()
+                }
+            collection.map {
+                println(it)
+            }
+        }
+
+
+    }
+
     Thread.sleep(30_000L)
 }
 
